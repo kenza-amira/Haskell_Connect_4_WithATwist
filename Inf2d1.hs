@@ -142,9 +142,9 @@ getHr hrTable node = hrTable!!node
 ---- Nodes with a lower heuristic value should be searched before nodes with a higher heuristic value.
 
 aStarSearch::Graph->Node->(Branch->Graph -> [Branch])->([Int]->Node->Int)->[Int]->(Graph->Branch->Int)->[Branch]-> [Node]-> Maybe Branch
-aStarSearch g destination next getHr hrTable cost (branch:branches) exploredList
-    |checkArrival destination (head branch) = Just Branch
-    |
+aStarSearch g destination next getHr hrTable cost (branch:branches) exploredList = undefined
+ --   |checkArrival destination (head branch) = Just branch
+--    |explored (head branch) exploredList = aStarSearch g destination next getHr hrTable cost branches exploredList
 
 -- | Section 5: Games
 -- See ConnectFourWithTwist.hs for more detail on  functions that might be helpful for your implementation. 
@@ -202,3 +202,12 @@ minValue node role alpha beta
         value = minValue node 0 alpha beta
         bestValMin = min bestValMin value
         alpha = min alpha bestValMin
+
+aStarHelper :: [Branch] -> [Int] -> Node
+aStarHelper (branch:branches) hrTable = a
+    where a = min (getHr hrTable (head branch)) (getHr hrTable (head (head branches)))
+
+backtrack:: Branch -> [Branch]
+backtrack branch
+    | length branch >1 = [drop 1 branch]
+    | otherwise = [branch]
