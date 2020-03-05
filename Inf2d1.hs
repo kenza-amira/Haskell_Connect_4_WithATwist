@@ -98,6 +98,7 @@ breadthFirstSearch g destination next (branch:branches) exploredList
     |checkArrival destination (head branch) = Just branch
     |explored (head branch) exploredList = breadthFirstSearch g destination next branches exploredList
     |otherwise = breadthFirstSearch g destination next (branches ++ (next [head branch] g)) (exploredList ++ [head branch])
+     --   where bt = [[x] ++ [backtrack branch]| x <- next [head branch] g]
    
 
 -- | Depth-Limited Search
@@ -209,7 +210,7 @@ aStarHelper :: Graph -> [Branch] -> [Int] -> Branch
 aStarHelper g (branch:branches) hrTable = [z| (y,z)<-zip hrTable [0..(length hrTable)-1], y== a]
     where a = min (getHr hrTable (head branch) + cost g branch ) (getHr hrTable (head (head branches)) + cost g (head branches))
 
-backtrack:: Branch -> [Branch]
+backtrack:: Branch -> Branch
 backtrack branch
-    | length branch >1 = [drop 1 branch]
-    | otherwise = [branch]
+    | length branch >1 = drop 1 branch
+    | otherwise = branch
