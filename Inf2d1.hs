@@ -98,7 +98,7 @@ breadthFirstSearch g destination next (branch:branches) exploredList
     |checkArrival destination (head branch) = Just branch
     |explored (head branch) exploredList = breadthFirstSearch g destination next branches exploredList
     |otherwise = breadthFirstSearch g destination next (branches ++ (next [head branch] g)) (exploredList ++ [head branch])
-     --   where bt = [[x] ++ [backtrack branch]| x <- next [head branch] g]
+     --   where bt = [[backtrack branch]++[x]| x <- next [head branch] g]
    
 
 -- | Depth-Limited Search
@@ -198,7 +198,7 @@ maxValue node role alpha beta
 
 minValue :: Int -> Int -> Int -> Int -> Int
 minValue node role alpha beta 
-  | beta <= alpha  = -2
+  | beta <= alpha  = 2
   | otherwise = bestValMin
     where 
         value = minValue node 0 alpha beta
