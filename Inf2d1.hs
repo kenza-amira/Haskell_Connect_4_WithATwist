@@ -142,9 +142,10 @@ getHr hrTable node = hrTable!!node
 ---- Nodes with a lower heuristic value should be searched before nodes with a higher heuristic value.
 
 aStarSearch::Graph->Node->(Branch->Graph -> [Branch])->([Int]->Node->Int)->[Int]->(Graph->Branch->Int)->[Branch]-> [Node]-> Maybe Branch
-aStarSearch g destination next getHr hrTable cost (branch:branches) exploredList = undefined
- --   |checkArrival destination (head branch) = Just branch
---    |explored (head branch) exploredList = aStarSearch g destination next getHr hrTable cost branches exploredList
+aStarSearch g destination next getHr hrTable cost (branch:branches) exploredList
+    |checkArrival destination (head branch) = Just branch
+    |explored (head branch) exploredList = aStarSearch g destination next getHr hrTable cost branches exploredList
+    |otherwise = aStarSearch g destination next getHr hrTable cost ([aStarHelper g branches hrTable] ++ branches) (exploredList ++ [head branch])
 
 -- | Section 5: Games
 -- See ConnectFourWithTwist.hs for more detail on  functions that might be helpful for your implementation. 
@@ -202,10 +203,11 @@ minValue node role alpha beta
         value = minValue node 0 alpha beta
         bestValMin = min bestValMin value
         alpha = min alpha bestValMin
-
-aStarHelper :: [Branch] -> [Int] -> Node
-aStarHelper (branch:branches) hrTable = a
-    where a = min (getHr hrTable (head branch)) (getHr hrTable (head (head branches)))
+-- This is a helper function for the A* algorithm. It searches all the branches of the search agenda and looks for the branch
+-- with the smallest heuristic f(n) = h(n) + g(n)
+aStarHelper :: Graph -> [Branch] -> [Int] -> Branch
+aStarHelper g (branch:branches) hrTable = [z| (y,z)<-zip hrTable [0..(length hrTable)-1], y== a]
+    where a = min (getHr hrTable (head branch) + cost g branch ) (getHr hrTable (head (head branches)) + cost g (head branches))
 
 backtrack:: Branch -> [Branch]
 backtrack branch
