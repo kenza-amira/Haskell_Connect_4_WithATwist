@@ -95,10 +95,13 @@ breadthFirstSearch:: Graph -> Node->(Branch ->Graph -> [Branch])->[Branch]->[Nod
 breadthFirstSearch g destination next [] exploredList = Nothing
 breadthFirstSearch [] destination next branches exploredList = Nothing
 breadthFirstSearch g destination next (branch:branches) exploredList
-    |checkArrival destination (head branch) = Just branch
-    |explored (head branch) exploredList = breadthFirstSearch g destination next branches exploredList
-    |otherwise = breadthFirstSearch g destination next (branches ++ (next [head branch] g)) (exploredList ++ [head branch])
-     --   where bt = [[backtrack branch]++[x]| x <- next [head branch] g]
+    |checkArrival destination (head branch) = Just branch 
+    |explored (head branch) exploredList = breadthFirstSearch g destination next branches exploredList 
+    |otherwise = breadthFirstSearch g destination next (branches ++ backtrack) (exploredList ++ [head branch]) -- Does a breadth first search on the new search agenda with the previous node added to the explored list
+        where backtrack = [x ++ (drop 1 branch)| x <- next [head branch] g] -- This adds the full branch to the search agenda, that is, it uses "next" to find the next nodes
+                                                                            -- to expand but it also adds to it the previous nodes (drop 1 branch) so that we can get the full branch when we return it.
+                                                                            -- The reason why we drop 1 node is to avoid a duplicate of the parent node.
+                                                                            -- This is put at the end of the search agenda as we first expand shallowest nodes in a breadth first search.
    
 
 -- | Depth-Limited Search
@@ -108,10 +111,11 @@ depthLimitedSearch::Graph ->Node->(Branch ->Graph-> [Branch])->[Branch]-> Int->[
 depthLimitedSearch g destination next [] d exploredList = Nothing
 depthLimitedSearch [] destination next branches d exploredList = Nothing
 depthLimitedSearch g destination next (branch:branches)  d exploredList
-    | d == 0 = Nothing
+    | d == (-1) = Nothing -- stops the loop at -1 becaue we index the levels starting at 0 instead of 1.
     | checkArrival destination (head branch) = Just branch
     | explored (head branch) exploredList = depthLimitedSearch g destination next branches d exploredList
-    | otherwise = depthLimitedSearch g destination next (branches ++ (next [head branch] g)) (d-1) (exploredList ++ [head branch])
+    | otherwise = depthLimitedSearch g destination next (backtrack ++ branches) (d-1) (exploredList ++ [head branch]) -- Here we swap the order in which we put the new branches and put them at the front as depth limited expands deepest unexpanded node
+        where backtrack = [x ++ (drop 1 branch)| x <- next [head branch] g] -- same as breadth first search
 
 
 
@@ -143,10 +147,13 @@ getHr hrTable node = hrTable!!node
 ---- Nodes with a lower heuristic value should be searched before nodes with a higher heuristic value.
 
 aStarSearch::Graph->Node->(Branch->Graph -> [Branch])->([Int]->Node->Int)->[Int]->(Graph->Branch->Int)->[Branch]-> [Node]-> Maybe Branch
-aStarSearch g destination next getHr hrTable cost (branch:branches) exploredList
-    |checkArrival destination (head branch) = Just branch
-    |explored (head branch) exploredList = aStarSearch g destination next getHr hrTable cost branches exploredList
-    |otherwise = aStarSearch g destination next getHr hrTable cost ([aStarHelper g branches hrTable] ++ branches) (exploredList ++ [head branch])
+aStarSearch g destination next getHr hrTable cost (branch:branches) exploredList = undefined
+--    |checkArrival destination (head branch) = Just branch
+--    |explored (head branch) exploredList = aStarSearch g destination next getHr hrTable cost branches exploredList
+--    |otherwise = aStarSearch g destination next getHr hrTable cost (bestpath ++ branches) (exploredList ++ [head branch])
+--        where 
+ --           bestpath = [y| x <- next [head branch] g, (y,z) <- zip x totalHeuristic, z == minimum totalHeuristic]
+  --          totalHeuristic = [(cost g x) + getHr hrTable (head x)]
 
 -- | Section 5: Games
 -- See ConnectFourWithTwist.hs for more detail on  functions that might be helpful for your implementation. 
@@ -204,13 +211,5 @@ minValue node role alpha beta
         value = minValue node 0 alpha beta
         bestValMin = min bestValMin value
         alpha = min alpha bestValMin
--- This is a helper function for the A* algorithm. It searches all the branches of the search agenda and looks for the branch
--- with the smallest heuristic f(n) = h(n) + g(n)
-aStarHelper :: Graph -> [Branch] -> [Int] -> Branch
-aStarHelper g (branch:branches) hrTable = [z| (y,z)<-zip hrTable [0..(length hrTable)-1], y== a]
-    where a = min (getHr hrTable (head branch) + cost g branch ) (getHr hrTable (head (head branches)) + cost g (head branches))
 
-backtrack:: Branch -> Branch
-backtrack branch
-    | length branch >1 = drop 1 branch
-    | otherwise = branch
+
