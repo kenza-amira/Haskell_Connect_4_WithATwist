@@ -107,7 +107,7 @@ depthLimitedSearch::Graph ->Node->(Branch ->Graph-> [Branch])->[Branch]-> Int->[
 depthLimitedSearch g destination next [] d exploredList = Nothing
 depthLimitedSearch [] destination next branches d exploredList = Nothing
 depthLimitedSearch g destination next (branch:branches)  d exploredList
-   -- | d == (-1) = Nothing -- stops the loop at -1 becaue we index the levels starting at 0 instead of 1.
+  --  | d == (-1) = Nothing -- stops the loop at -1 becaue we index the levels starting at 0 instead of 1.
     | checkArrival destination (head branch) = Just branch
     | length branch >= (d +1) = depthLimitedSearch g destination next branches (d+1) exploredList
     | d == (-1) = Nothing
@@ -147,13 +147,16 @@ getHr hrTable node = hrTable!!node
 ---- Nodes with a lower heuristic value should be searched before nodes with a higher heuristic value.
 
 aStarSearch::Graph->Node->(Branch->Graph -> [Branch])->([Int]->Node->Int)->[Int]->(Graph->Branch->Int)->[Branch]-> [Node]-> Maybe Branch
+aStarSearch [] destination next getHr hrTable cost branches exploredList = Nothing
+aStarSearch g destination next getHr hrTable cost [] exploredList = Nothing
 aStarSearch g destination next getHr hrTable cost (branch:branches) exploredList
     |checkArrival destination (head branch) = Just branch
     |explored (head branch) exploredList = aStarSearch g destination next getHr hrTable cost branches exploredList
-    |otherwise = aStarSearch g destination next getHr hrTable cost ([bestpath] ++ backtrack ++ branches) (exploredList ++ [head branch])
+    | (length bestpath > 1) = aStarSearch g destination next getHr hrTable cost ((reverse bestpath)++  (next branch g) ++ branches ) (exploredList ++ [head branch])
+    |otherwise = aStarSearch g destination next getHr hrTable cost (bestpath ++  (next branch g) ++ branches ) (exploredList ++ [head branch])
        where 
-            bestpath = [y| xs <- next branch g, (y,z) <- zip xs [(cost g xs) + getHr hrTable (head xs)], z == minimum[(cost g xs) + getHr hrTable (head xs)]]
-            backtrack = [x ++ (drop 1 branch)| x <- next [head branch] g]
+            min = minimum [z| xs <- next branch g, (y,z) <- zip [xs] [(cost g xs) + getHr hrTable (head xs)]] -- The zip gives a tuple of the form (branch,cost + heuristic). This function finds the smallest cost.
+            bestpath = [ys| xs <- next branch g, (ys,z) <- zip [xs] [(cost g xs) + getHr hrTable (head xs)], z == min] -- This function returns the branch associated with the smallest cost.
 -- | Section 5: Games
 -- See ConnectFourWithTwist.hs for more detail on  functions that might be helpful for your implementation. 
 
@@ -166,8 +169,8 @@ aStarSearch g destination next getHr hrTable cost (branch:branches) exploredList
 -- The function determines the score of a terminal state, assigning it a value of +1, -1 or 0:
 eval :: Game -> Int
 eval game 
-    | (checkWin game 1) = -1
-    | (checkWin game 0) = 1
+    | checkWin game 1 = 1
+    | checkWin game 0 = -1
     | otherwise = 0
 
 -- | The alphabeta function should return the minimax value using alphabeta pruning.
