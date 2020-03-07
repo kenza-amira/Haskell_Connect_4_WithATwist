@@ -70,12 +70,13 @@ bestValMin = 2
 -- Your function should return an empty list if the input search branch is empty.
 -- This implementation of next function does not backtrace branches.
 next::Branch -> Graph ->  [Branch]
--- Starting with (((take (numNodes)).drop (b*numNodes)) g) : This drops the rows with dont care about and takes the row we are working with
+-- Starting with (((take (numNodes)).drop (branch*numNodes)) g) : This drops the rows with dont care about and takes the row we are working with
 -- js is just the indexing bit that we zip with our rows to get tuples of the form (column, value)
--- we then check if the value is greater than 0 and return the index and the branch
+-- we then check if the value is greater than 0 (i.e there is an edge) and return the index (i.e the next node) and the branch
 next [] g = []
 next branch [] = []
-next branch g = [y:[b]| b <- branch, (y,z) <- zip js (((take (numNodes)).drop (b*numNodes)) g), z > 0]
+next branch g = [y:branch|(y,z) <- zip [0..num-1] (((take (num)).drop ((branch!!0)*num)) g), z > 0]
+    where num = (ceiling . sqrt . fromIntegral . length $ g)
     
 
 -- |The checkArrival function should return true if the current location of the robot is the destination, and false otherwise.
@@ -97,12 +98,7 @@ breadthFirstSearch [] destination next branches exploredList = Nothing
 breadthFirstSearch g destination next (branch:branches) exploredList
     |checkArrival destination (head branch) = Just branch 
     |explored (head branch) exploredList = breadthFirstSearch g destination next branches exploredList 
-    |otherwise = breadthFirstSearch g destination next (branches ++ backtrack) (exploredList ++ [head branch]) -- Does a breadth first search on the new search agenda with the previous node added to the explored list
-        where backtrack = [x ++ (drop 1 branch)| x <- next [head branch] g] -- This adds the full branch to the search agenda, that is, it uses "next" to find the next nodes
-                                                                            -- to expand but it also adds to it the previous nodes (drop 1 branch) so that we can get the full branch when we return it.
-                                                                            -- The reason why we drop 1 node is to avoid a duplicate of the parent node.
-                                                                            -- This is put at the end of the search agenda as we first expand shallowest nodes in a breadth first search.
-   
+    |otherwise = breadthFirstSearch g destination next (branches ++ (next branch g)) (exploredList ++ [head branch]) 
 
 -- | Depth-Limited Search
 -- The depthLimitedSearch function is similiar to the depthFirstSearch function,
@@ -111,11 +107,12 @@ depthLimitedSearch::Graph ->Node->(Branch ->Graph-> [Branch])->[Branch]-> Int->[
 depthLimitedSearch g destination next [] d exploredList = Nothing
 depthLimitedSearch [] destination next branches d exploredList = Nothing
 depthLimitedSearch g destination next (branch:branches)  d exploredList
-    | d == (-1) = Nothing -- stops the loop at -1 becaue we index the levels starting at 0 instead of 1.
+   -- | d == (-1) = Nothing -- stops the loop at -1 becaue we index the levels starting at 0 instead of 1.
     | checkArrival destination (head branch) = Just branch
+    | length branch >= (d +1) = depthLimitedSearch g destination next branches (d+1) exploredList
+    | d == (-1) = Nothing
     | explored (head branch) exploredList = depthLimitedSearch g destination next branches d exploredList
-    | otherwise = depthLimitedSearch g destination next (backtrack ++ branches) (d-1) (exploredList ++ [head branch]) -- Here we swap the order in which we put the new branches and put them at the front as depth limited expands deepest unexpanded node
-        where backtrack = [x ++ (drop 1 branch)| x <- next [head branch] g] -- same as breadth first search
+    | otherwise = depthLimitedSearch g destination next ((next branch g)++ branches) (d-1) (exploredList ++ [head branch]) -- Here we swap the order in which we put the new branches and put them at the front as depth limited expands deepest unexpanded node
 
 
 
@@ -131,7 +128,10 @@ cost :: Graph ->Branch  -> Int
 -- is the starting node and the second element the node to go to.
 -- This also allows to get the row and column value of the adjacency matrix (graph) we need to check (gr!!(row*numNodes + col))
 -- Finally the sum allows to have the cost of the whole trace.
-cost gr branch = sum [gr!!(row*numNodes + col)| (row,col) <- zip branch (drop 1 branch)]
+cost [] branch = 0
+cost gr [] = 0
+cost gr branch = sum [gr!!(row*num + col)| (row,col) <- zip (drop 1 branch) branch]
+    where num = (ceiling . sqrt . fromIntegral . length $ gr)
 
 
     
@@ -147,14 +147,13 @@ getHr hrTable node = hrTable!!node
 ---- Nodes with a lower heuristic value should be searched before nodes with a higher heuristic value.
 
 aStarSearch::Graph->Node->(Branch->Graph -> [Branch])->([Int]->Node->Int)->[Int]->(Graph->Branch->Int)->[Branch]-> [Node]-> Maybe Branch
-aStarSearch g destination next getHr hrTable cost (branch:branches) exploredList = undefined
---    |checkArrival destination (head branch) = Just branch
---    |explored (head branch) exploredList = aStarSearch g destination next getHr hrTable cost branches exploredList
---    |otherwise = aStarSearch g destination next getHr hrTable cost (bestpath ++ branches) (exploredList ++ [head branch])
---        where 
- --           bestpath = [y| x <- next [head branch] g, (y,z) <- zip x totalHeuristic, z == minimum totalHeuristic]
-  --          totalHeuristic = [(cost g x) + getHr hrTable (head x)]
-
+aStarSearch g destination next getHr hrTable cost (branch:branches) exploredList
+    |checkArrival destination (head branch) = Just branch
+    |explored (head branch) exploredList = aStarSearch g destination next getHr hrTable cost branches exploredList
+    |otherwise = aStarSearch g destination next getHr hrTable cost ([bestpath] ++ backtrack ++ branches) (exploredList ++ [head branch])
+       where 
+            bestpath = [y| xs <- next branch g, (y,z) <- zip xs [(cost g xs) + getHr hrTable (head xs)], z == minimum[(cost g xs) + getHr hrTable (head xs)]]
+            backtrack = [x ++ (drop 1 branch)| x <- next [head branch] g]
 -- | Section 5: Games
 -- See ConnectFourWithTwist.hs for more detail on  functions that might be helpful for your implementation. 
 
@@ -174,10 +173,10 @@ eval game
 -- | The alphabeta function should return the minimax value using alphabeta pruning.
 -- The eval function should be used to get the value of a terminal state. 
 alphabeta:: Role -> Game -> Int
-alphabeta  player (g:game)
-    | (terminal game) = eval game
-    | (player == 1) =  maxValue g 1 (-2) 2 
-    | otherwise =  minValue g 0 (-2) 2 
+alphabeta  player (g:game) = undefined
+ --   | (terminal game) = eval game
+ --   | (player == 1) =  maxValue g 1 (-2) 2 
+  --  | otherwise =  minValue g 0 (-2) 2 
 
 
 -- | OPTIONAL!
