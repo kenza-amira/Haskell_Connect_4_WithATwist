@@ -57,11 +57,8 @@ numNodes = 4
 js :: [Node]
 js = [0..numNodes-1]
 
-bestValMax :: Int
-bestValMax = -2
-
-bestValMin :: Int
-bestValMin = 2
+counter :: Int
+counter = 0
 
 -- 
 
@@ -107,13 +104,12 @@ depthLimitedSearch::Graph ->Node->(Branch ->Graph-> [Branch])->[Branch]-> Int->[
 depthLimitedSearch g destination next [] d exploredList = Nothing
 depthLimitedSearch [] destination next branches d exploredList = Nothing
 depthLimitedSearch g destination next (branch:branches)  d exploredList
-  --  | d == (-1) = Nothing -- stops the loop at -1 becaue we index the levels starting at 0 instead of 1.
+    | counter == d  = depthLimitedSearch g destination next (reverse newagenda) (counter - 1) exploredList
     | checkArrival destination (head branch) = Just branch
-    | length branch >= (d +1) = depthLimitedSearch g destination next branches (d+1) exploredList
-    | d == (-1) = Nothing
-    | explored (head branch) exploredList = depthLimitedSearch g destination next branches d exploredList
-    | otherwise = depthLimitedSearch g destination next ((next branch g)++ branches) (d-1) (exploredList ++ [head branch]) -- Here we swap the order in which we put the new branches and put them at the front as depth limited expands deepest unexpanded node
-
+    | explored (head branch) exploredList = depthLimitedSearch g destination next branches (counter +1) exploredList
+    | otherwise = depthLimitedSearch g destination next ((next branch g)++ branches) (counter+1) (exploredList ++ [head branch]) -- Here we swap the order in which we put the new branches and put them at the front as depth limited expands deepest unexpanded node
+      where
+        newagenda = [b| b <- branches, notElem (head b) exploredList]
 
 
 -- | Section 4: Informed search
@@ -175,11 +171,13 @@ eval game
 
 -- | The alphabeta function should return the minimax value using alphabeta pruning.
 -- The eval function should be used to get the value of a terminal state. 
+
 alphabeta:: Role -> Game -> Int
-alphabeta  player (g:game) = undefined
- --   | (terminal game) = eval game
- --   | (player == 1) =  maxValue g 1 (-2) 2 
-  --  | otherwise =  minValue g 0 (-2) 2 
+alphabeta  player game 
+  | terminal game = eval game
+  | player == 1 = maxValue (takeWhile (>1) game) player (-2) 2
+  | otherwise = minValue (takeWhile (<1) game) player (-2) 2
+
 
 
 -- | OPTIONAL!
@@ -196,22 +194,26 @@ minimax player game=undefined
 -- Functions which increase the complexity of the algorithm will not get additional scores
 -}
 
-maxValue :: Int -> Int -> Int -> Int -> Int
-maxValue node role alpha beta 
-  | beta <= alpha  = -2
-  | otherwise = bestValMax
+bestMin :: Int
+bestMin = 2
+
+bestMax :: Int
+bestMax = (-2)
+
+maxValue :: Game -> Int -> Int -> Int -> Int
+maxValue game player alpha beta
+  | alpha2 >= beta = best
+  | otherwise = v
     where 
-        value = maxValue node 1 alpha beta
-        bestValMax = max bestValMax value
-        alpha = max alpha bestValMax
+      v = minValue game 1 alpha2 beta
+      best = max bestMax v
+      alpha2 = max best alpha
 
-minValue :: Int -> Int -> Int -> Int -> Int
-minValue node role alpha beta 
-  | beta <= alpha  = 2
-  | otherwise = bestValMin
+minValue :: Game -> Int -> Int -> Int -> Int
+minValue game player alpha beta
+  | alpha >= beta2 = best
+  | otherwise = v
     where 
-        value = minValue node 0 alpha beta
-        bestValMin = min bestValMin value
-        alpha = min alpha bestValMin
-
-
+      v = maxValue game 0 alpha beta2
+      best = min bestMin v
+      beta2 = min best beta
