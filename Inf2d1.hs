@@ -5,10 +5,12 @@
 
 module Inf2d1 where
 
-import Data.List (sortBy, elemIndices, elemIndex)
+import Data.List (sortBy, elemIndices, elemIndex, sort, group)
 import ConnectFourWithTwist
-
-
+import Data.Function
+import Data.Ord
+import           Control.Applicative (liftA2)
+import           Data.Tuple          (swap)
 
 
 {- NOTES:
@@ -57,8 +59,6 @@ numNodes = 4
 js :: [Node]
 js = [0..numNodes-1]
 
-counter :: Int
-counter = 0
 
 -- 
 
@@ -104,12 +104,10 @@ depthLimitedSearch::Graph ->Node->(Branch ->Graph-> [Branch])->[Branch]-> Int->[
 depthLimitedSearch g destination next [] d exploredList = Nothing
 depthLimitedSearch [] destination next branches d exploredList = Nothing
 depthLimitedSearch g destination next (branch:branches)  d exploredList
-    | counter == d  = depthLimitedSearch g destination next (reverse newagenda) (counter - 1) exploredList
-    | checkArrival destination (head branch) = Just branch
-    | explored (head branch) exploredList = depthLimitedSearch g destination next branches (counter +1) exploredList
-    | otherwise = depthLimitedSearch g destination next ((next branch g)++ branches) (counter+1) (exploredList ++ [head branch]) -- Here we swap the order in which we put the new branches and put them at the front as depth limited expands deepest unexpanded node
-      where
-        newagenda = [b| b <- branches, notElem (head b) exploredList]
+    | checkArrival destination (head branch)= Just branch
+    | length branch > d = depthLimitedSearch g destination next branches d exploredList --if our branch is bigger then the depth we look for other solutions
+    | otherwise = depthLimitedSearch g destination next (newAgenda ++ branches) d ([head branch] ++ exploredList) -- Here we swap the order in which we put the new branches and put them at the front as depth limited expands deepest unexpanded node
+        where newAgenda = [b | b <- next branch g, notElem (head b) (tail b)] -- if there's a loop then we skip the branch. (We check for a loop by searching if the head of the branch is already in the branch)
 
 
 -- | Section 4: Informed search
@@ -126,7 +124,7 @@ cost :: Graph ->Branch  -> Int
 -- Finally the sum allows to have the cost of the whole trace.
 cost [] branch = 0
 cost gr [] = 0
-cost gr branch = sum [gr!!(row*num + col)| (row,col) <- zip (drop 1 branch) branch]
+cost gr branch = sum [gr!!(row*num + col)| (row,col) <- zip (tail branch) branch]
     where num = (ceiling . sqrt . fromIntegral . length $ gr)
 
 
@@ -148,11 +146,15 @@ aStarSearch g destination next getHr hrTable cost [] exploredList = Nothing
 aStarSearch g destination next getHr hrTable cost (branch:branches) exploredList
     |checkArrival destination (head branch) = Just branch
     |explored (head branch) exploredList = aStarSearch g destination next getHr hrTable cost branches exploredList
-    | (length bestpath > 1) = aStarSearch g destination next getHr hrTable cost ((reverse bestpath)++  (next branch g) ++ branches ) (exploredList ++ [head branch])
-    |otherwise = aStarSearch g destination next getHr hrTable cost (bestpath ++  (next branch g) ++ branches ) (exploredList ++ [head branch])
+    | (length minBranches > 1) = aStarSearch g destination next getHr hrTable cost (reverse sortedpaths ++ branches) (exploredList ++ [head branch]) -- explores all paths in case some branches have same small cost.
+    |otherwise = aStarSearch g destination next getHr hrTable cost (sortedpaths ++ branches ) (exploredList ++ [head branch])
        where 
-            min = minimum [z| xs <- next branch g, (y,z) <- zip [xs] [(cost g xs) + getHr hrTable (head xs)]] -- The zip gives a tuple of the form (branch,cost + heuristic). This function finds the smallest cost.
-            bestpath = [ys| xs <- next branch g, (ys,z) <- zip [xs] [(cost g xs) + getHr hrTable (head xs)], z == min] -- This function returns the branch associated with the smallest cost.
+            sorted = sortBy (compare `on` snd) [(y,z)| xs <- next branch g, (y,z) <- zip [xs] [(cost g xs) + getHr hrTable (head xs)]] -- The zip gives tuples of the form (branch, cost + heuristic). This function sorts the zip by total cost.
+            sortedpaths = [ys|(ys,z) <- sorted] -- This function returns the sorted branches
+            minValue = minimum [z| xs <- next branch g, (y,z) <- zip [xs] [(cost g xs) + getHr hrTable (head xs)]] -- finds the smallest cost
+            minBranches =  [y| xs <- next branch g, (y,z) <- zip [xs] [(cost g xs) + getHr hrTable (head xs)], z == minValue] -- finds the branches associated with the smallest cost
+
+
 -- | Section 5: Games
 -- See ConnectFourWithTwist.hs for more detail on  functions that might be helpful for your implementation. 
 
@@ -175,8 +177,8 @@ eval game
 alphabeta:: Role -> Game -> Int
 alphabeta  player game 
   | terminal game = eval game
-  | player == 1 = maxValue (takeWhile (>1) game) player (-2) 2
-  | otherwise = minValue (takeWhile (<1) game) player (-2) 2
+  | player == 1 = maxValue game player (-2) 2
+  | otherwise = minValue game player (-2) 2
 
 
 
@@ -194,26 +196,15 @@ minimax player game=undefined
 -- Functions which increase the complexity of the algorithm will not get additional scores
 -}
 
-bestMin :: Int
-bestMin = 2
-
-bestMax :: Int
-bestMax = (-2)
 
 maxValue :: Game -> Int -> Int -> Int -> Int
 maxValue game player alpha beta
-  | alpha2 >= beta = best
-  | otherwise = v
-    where 
-      v = minValue game 1 alpha2 beta
-      best = max bestMax v
-      alpha2 = max best alpha
+ | alpha > ft = ft
+ | otherwise = alpha
+    where ft = maximum [min alpha (minValue g (switch player) alpha beta)| g <- moves game player]
 
 minValue :: Game -> Int -> Int -> Int -> Int
 minValue game player alpha beta
-  | alpha >= beta2 = best
-  | otherwise = v
-    where 
-      v = maxValue game 0 alpha beta2
-      best = min bestMin v
-      beta2 = min best beta
+ | alpha < ft = alpha
+ | otherwise = ft
+    where ft = minimum [max alpha (maxValue g (switch player) alpha beta)| g <- moves game player]
