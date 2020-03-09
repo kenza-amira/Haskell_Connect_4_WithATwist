@@ -174,9 +174,9 @@ eval game
 -- The eval function should be used to get the value of a terminal state. 
 
 alphabeta:: Role -> Game -> Int
-alphabeta  player game = undefined
+alphabeta  player game
     | terminal game = eval game
-    | player == 1 = maxValue game player (-2) 2
+    | player == 0 = maxValue game player (-2) 2
     | otherwise = minValue game player (-2) 2
 
 
@@ -196,11 +196,33 @@ minimax player game=undefined
 -}
 
 
-maxValue :: Game -> Int -> Int -> Int -> Int
-maxValue game player alpha beta  = undefined
+maxValue :: Game -> Role -> Int -> Int -> Int
+maxValue game player alpha beta  
+    | terminal game = eval game
+    | otherwise = forLoopMax outcomes player (-2) alpha beta
+        where outcomes = (movesAndTurns game player)
 
-minValue :: Game -> Int -> Int -> Int -> Int
+minValue :: Game -> Role -> Int -> Int -> Int
 minValue game player alpha beta
     | terminal game = eval game
-    | otherwise = forLoopMin
+    | otherwise = forLoopMin outcomes player 2 alpha beta
+        where outcomes = (movesAndTurns game player)
 
+-- This function does the "for each a in Actions (state)" of the alpha beta pruning algorithm
+forLoopMin :: [Game] -> Role -> Int -> Int -> Int -> Int 
+forLoopMin [] player v alpha beta = v
+forLoopMin (game:games) player v alpha beta 
+    | v <= alpha =  newValue
+    | otherwise = forLoopMax games player v alpha newBeta
+        where 
+            newValue = maxValue game (switch player) alpha beta
+            newBeta = min beta newValue
+
+forLoopMax :: [Game] -> Role -> Int -> Int -> Int -> Int
+forLoopMax [] player v alpha beta = v
+forLoopMax (game:games) player v alpha beta 
+    | v >= beta = newValue
+    | otherwise = forLoopMax games player v newAlpha beta
+        where 
+            newValue = minValue game (switch player) alpha beta
+            newAlpha = max alpha newValue
