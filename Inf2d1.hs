@@ -67,7 +67,7 @@ js = [0..numNodes-1]
 -- Your function should return an empty list if the input search branch is empty.
 -- This implementation of next function does not backtrace branches.
 next::Branch -> Graph ->  [Branch]
--- Starting with (((take (numNodes)).drop (branch*numNodes)) g) : This drops the rows with dont care about and takes the row we are working with
+-- Starting with (((take (numNodes)).drop ((branch!!0)*numNodes)) g) : This drops the rows with dont care about and takes the row we are working with.
 -- js is just the indexing bit that we zip with our rows to get tuples of the form (column, value)
 -- we then check if the value is greater than 0 (i.e there is an edge) and return the index (i.e the next node) and the branch
 next [] g = []
