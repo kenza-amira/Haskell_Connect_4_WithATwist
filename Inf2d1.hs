@@ -72,8 +72,8 @@ next::Branch -> Graph ->  [Branch]
 -- we then check if the value is greater than 0 (i.e there is an edge) and return the index (i.e the next node) and the branch
 next [] g = []
 next branch [] = []
-next branch g = [y:branch|(y,z) <- zip [0..num-1] (((take (num)).drop ((branch!!0)*num)) g), z > 0]
-    where num = (ceiling . sqrt . fromIntegral . length $ g)
+next branch g = [y:branch|(y,z) <- zip js (((take (numNodes)).drop ((branch!!0)*numNodes)) g), z > 0]
+
     
 
 -- |The checkArrival function should return true if the current location of the robot is the destination, and false otherwise.
@@ -126,8 +126,8 @@ cost :: Graph ->Branch  -> Int
 -- Finally the sum allows to have the cost of the whole trace.
 cost [] branch = 0
 cost gr [] = 0
-cost gr branch = sum [gr!!(row*num + col)| (row,col) <- zip (tail branch) branch]
-    where num = (ceiling . sqrt . fromIntegral . length $ gr)
+cost gr branch = sum [gr!!(row*numNodes + col)| (row,col) <- zip (tail branch) branch]
+
 
 
     
