@@ -176,7 +176,7 @@ eval game
 alphabeta:: Role -> Game -> Int
 alphabeta  player game
     | terminal game = eval game
-    | player == 0 = maxValue game player (-2) 2
+    | player == 1 = maxValue game player (-2) 2
     | otherwise = minValue game player (-2) 2
 
 
@@ -195,34 +195,38 @@ minimax player game=undefined
 -- Functions which increase the complexity of the algorithm will not get additional scores
 -}
 
-
+-- |ALPHA BETA PRUNING HELPERS: All the helpers below are derived from the pseudocode provided.
+-- Returns evaluation of game if terminal otherwise does the looping part (for Max)
 maxValue :: Game -> Role -> Int -> Int -> Int
 maxValue game player alpha beta  
     | terminal game = eval game
     | otherwise = forLoopMax outcomes player (-2) alpha beta
         where outcomes = (movesAndTurns game player)
 
+-- This function does the "for each a in Actions (state)" of the alpha beta pruning algorithm for the Max Value part
+forLoopMax :: [Game] -> Role -> Int -> Int -> Int -> Int
+forLoopMax [] player v alpha beta = v
+forLoopMax (game:games) player v alpha beta 
+    | newValue >= beta = newValue
+    | otherwise = forLoopMax games player newValue newAlpha beta
+        where 
+            newValue = max v (minValue game (switch player) alpha beta)
+            newAlpha = max alpha newValue
+
+-- Returns evaluation of game if terminal otherwise does the looping part (for Min)
 minValue :: Game -> Role -> Int -> Int -> Int
 minValue game player alpha beta
     | terminal game = eval game
     | otherwise = forLoopMin outcomes player 2 alpha beta
         where outcomes = (movesAndTurns game player)
 
--- This function does the "for each a in Actions (state)" of the alpha beta pruning algorithm
+-- This function does the "for each a in Actions (state)" of the alpha beta pruning algorithm for the Min Value part
 forLoopMin :: [Game] -> Role -> Int -> Int -> Int -> Int 
 forLoopMin [] player v alpha beta = v
 forLoopMin (game:games) player v alpha beta 
-    | v <= alpha =  newValue
-    | otherwise = forLoopMax games player v alpha newBeta
+    | newValue <= alpha =  newValue
+    | otherwise = forLoopMin games player newValue alpha newBeta
         where 
-            newValue = maxValue game (switch player) alpha beta
+            newValue = min v (maxValue game (switch player) alpha beta)
             newBeta = min beta newValue
 
-forLoopMax :: [Game] -> Role -> Int -> Int -> Int -> Int
-forLoopMax [] player v alpha beta = v
-forLoopMax (game:games) player v alpha beta 
-    | v >= beta = newValue
-    | otherwise = forLoopMax games player v newAlpha beta
-        where 
-            newValue = minValue game (switch player) alpha beta
-            newAlpha = max alpha newValue
